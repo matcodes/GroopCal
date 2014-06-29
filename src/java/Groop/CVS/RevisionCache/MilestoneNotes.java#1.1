@@ -1,0 +1,162 @@
+package Groop;
+
+import java.sql.DriverManager;
+import java.sql.Date;
+import java.sql.Connection;
+import javax.sql.DataSource;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.*;
+
+public class MilestoneNotes {
+
+    private String mMNID = "";
+    private String mMID = "";
+    private String mNote = "";
+    private java.util.Date mAdded = null;
+    
+    //connection object, retrieved from Helpers class
+    private Connection mCon = null;
+    
+
+    
+    public MilestoneNotes() {
+    }
+    
+    public MilestoneNotes(Connection con) {
+        mCon = con;
+    }
+
+    public MilestoneNotes(Connection con, String MNID) {
+        try {
+            mCon = con;
+            
+            //it will be null if it's the first instance
+            openConnection();
+
+            String query = "select * FROM MilestoneNotes ct where MNID = ?";
+            PreparedStatement pt = mCon.prepareStatement(query);
+            pt.setString(1, mMID);
+            ResultSet rset = null;
+            rset = pt.executeQuery();
+            if (rset.next()) {
+                mMNID = rset.getString("MNID");
+                mMID = rset.getString("MID");
+                mNote = rset.getString("Note");
+                mAdded = rset.getTimestamp("Added");
+                rset.close();
+            }
+            else {
+                rset.close();
+            }
+            
+            closeConnection();
+            pt.close();
+
+            return;
+        }
+        catch (Exception e) {
+            closeConnection();
+            System.out.println("MilestoneNotes:Constructor(2.1): " + e.getMessage());
+        }
+    }
+
+    public MilestoneNotes(ResultSet rset) {
+        try {
+            mMID = rset.getString("MNID");
+            mMNID = rset.getString("MNID");
+            mNote = rset.getString("Note");
+            mAdded = rset.getTimestamp("Added");
+
+            return;
+        }
+        catch (Exception e) {
+            System.out.println("MilestoneNotes:Constructor(3): " + e.getMessage());
+        }
+    }
+    
+    public void updateMilestone() {
+        try {
+            openConnection();
+
+            String sql = "Update MilestoneNotes set MID = ?, Note = ?, Added = ? WHERE MNID = ?";
+            if (mMID.isEmpty() )
+                sql = "INSERT INTO MilestoneNotes (MID, Note, Added, MNID) VALUES (?,?,?, UUID())";
+
+            PreparedStatement ptNew = mCon.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
+            ptNew.setString(1, mMID);
+            ptNew.setString(2, mNote);
+            ptNew.setTimestamp(3, new java.sql.Timestamp(mAdded.getTime()));
+            
+            if (!mMID.isEmpty())
+                ptNew.setString(4, mMID);
+
+            ptNew.executeUpdate();
+            ptNew.close();
+
+            if (mMID.isEmpty()) {
+                //get the record ID of the newly added Hospital
+                /*
+                ResultSet rset = ptNew.getGeneratedKeys();
+                if (rset.first())
+                    mUID = rset.getString(1);
+                 */
+                String sSql = "select MNID from MilestoneNotes where Note = ? and MID = ?";
+                PreparedStatement pt = mCon.prepareStatement(sSql);
+                ptNew.setString(1, mNote);
+                ptNew.setString(2, mMID);
+                ResultSet rset = pt.executeQuery();
+
+                if (rset.next()) {
+                    mMID = rset.getString("MNID");
+                }
+
+                rset.close();
+                pt.close();
+            }
+            closeConnection();
+        }
+        catch (Exception e) {
+            closeConnection();
+            System.out.println("MilestoneNotes:updateMilestone: " + e.getMessage());
+        }
+    }
+
+    //getters
+    public String getMID() {
+        return mMID;
+    }
+
+    public String getNote() {
+        return mNote;
+    }
+    
+    //setters
+    public void setNote(String s) {
+        mNote = s;
+    }
+    
+    private void openConnection() {
+        try {
+            if (mCon == null || mCon.isClosed()) {
+                Class.forName("com.mysql.jdbc.Driver").newInstance();
+
+                mCon = DriverManager.getConnection(Helpers.getDBCx(), Helpers.getDBUser(), Helpers.getDBPass());
+            }
+        }
+        catch (Exception ec) {
+            System.out.println("MilestoneNotes:openConnection: " + ec.getMessage());
+        }
+    }
+
+    private void closeConnection() {
+        try {
+            if (!mCon.isClosed())
+                mCon.close();
+        }
+        catch (Exception ec) {
+            System.out.println("MilestoneNotes:closeConnection: " + ec.getMessage());
+        }
+    }     }

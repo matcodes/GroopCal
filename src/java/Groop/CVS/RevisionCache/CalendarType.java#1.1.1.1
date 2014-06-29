@@ -1,0 +1,250 @@
+package Groop;
+
+import java.sql.DriverManager;
+import java.sql.Date;
+import java.sql.Connection;
+import javax.sql.DataSource;
+import javax.naming.Context;
+import javax.naming.InitialContext;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.*;
+
+public class CalendarType {
+
+    private String mCID = "";
+    private String mCType = "";
+    
+    //connection object, retrieved from Helpers class
+    private Connection mCon = null;
+    
+
+    
+    public CalendarType() {
+    }
+    
+    public CalendarType(Connection con) {
+        mCon = con;
+    }
+
+    public CalendarType(Connection con, String cid) {
+        try {
+            mCon = con;
+            
+            //it will be null if it's the first instance
+            openConnection();
+
+            String query = "select * FROM CalendarType ct order by CDate";
+            PreparedStatement pt = mCon.prepareStatement(query);
+            pt.setString(1, cid);
+            ResultSet rset = null;
+            rset = pt.executeQuery();
+            if (rset.next()) {
+                mCID = rset.getString("CID");
+                mCType = rset.getString("CType");
+                mCDate = rset.getTimestamp("CDate");
+                mItemID = rset.getString("ItemID");
+                mItemType = rset.getString("ItemType");
+                mLocation = rset.getString("Location");
+                mStartDate = rset.getTimestamp("StartDate");
+                mDueDate = rset.getTimestamp("DueDate");
+                mTier = rset.getInt("Tier");
+                mDepartment = rset.getString("Department");
+                rset.close();
+            }
+            else {
+                rset.close();
+            }
+            
+            closeConnection();
+            pt.close();
+
+            return;
+        }
+        catch (Exception e) {
+            closeConnection();
+            System.out.println("CalendarType:Constructor(2.1): " + e.getMessage());
+        }
+    }
+
+    public CalendarType(ResultSet rset) {
+        try {
+            mCID = rset.getString("CID");
+            mCType = rset.getString("CType");
+            mCDate = rset.getTimestamp("CDate");
+            mItemID = rset.getString("ItemID");
+            mItemType = rset.getString("ItemType");
+            mLocation = rset.getString("Location");
+            mStartDate = rset.getTimestamp("StartDate");
+            mDueDate = rset.getTimestamp("DueDate");
+            mTier = rset.getInt("Tier");
+            mDepartment = rset.getString("Department");
+
+            return;
+        }
+        catch (Exception e) {
+            System.out.println("CalendarType:Constructor(3): " + e.getMessage());
+        }
+    }
+    
+    public void updateCalendarType() {
+        try {
+            openConnection();
+
+            String sql = "Update CalendarType set CType = ?, CDate = ?, ItemID = ?, ItemType = ?, Location = ?, StartDate = ?, DueDate = ?, Tier = ?, Department = ? WHERE CID = ?";
+            if (mCID.isEmpty() )
+                sql = "INSERT INTO CalendarType (CType, CDate, ItemID, ItemType, Location, StartDate, DueDate, Tier, Department, CID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, UUID())";
+
+            PreparedStatement ptNew = mCon.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS);
+            ptNew.setString(1, mCType);
+            ptNew.setTimestamp(2, new java.sql.Timestamp(mCDate.getTime()));
+            ptNew.setString(3, mItemID);
+            ptNew.setString(4, mItemType);
+            ptNew.setString(5, mLocation);
+            ptNew.setTimestamp(6, new java.sql.Timestamp(mStartDate.getTime()));
+            ptNew.setTimestamp(7, new java.sql.Timestamp(mDueDate.getTime()));
+            ptNew.setInt(8, mTier);
+            ptNew.setString(9, mDepartment);
+            
+            if (!mCID.isEmpty())
+                ptNew.setString(10, mCID);
+
+            ptNew.executeUpdate();
+            ptNew.close();
+
+            if (mCID.isEmpty()) {
+                //get the record ID of the newly added Hospital
+                /*
+                ResultSet rset = ptNew.getGeneratedKeys();
+                if (rset.first())
+                    mUID = rset.getString(1);
+                 */
+                String sSql = "select CID from CalendarType where CType = ? AND CDate = ? AND ItemID = ? AND ItemType = ? AND Location = ? AND StartDate = ? AND DueDate = ? AND Tier = ? AND Department = ?";
+                PreparedStatement pt = mCon.prepareStatement(sSql);
+                ptNew.setString(1, mCType);
+                ptNew.setTimestamp(2, new java.sql.Timestamp(mCDate.getTime()));
+                ptNew.setString(3, mItemID);
+                ptNew.setString(4, mItemType);
+                ptNew.setString(5, mLocation);
+                ptNew.setTimestamp(6, new java.sql.Timestamp(mStartDate.getTime()));
+                ptNew.setTimestamp(7, new java.sql.Timestamp(mDueDate.getTime()));
+                ptNew.setInt(8, mTier);
+                ptNew.setString(9, mDepartment);
+                ResultSet rset = pt.executeQuery();
+
+                if (rset.next()) {
+                    mCID = rset.getString("CID");
+                }
+
+                rset.close();
+                pt.close();
+            }
+            closeConnection();
+        }
+        catch (Exception e) {
+            closeConnection();
+            System.out.println("CalendarType:updateCalendarItem: " + e.getMessage());
+        }
+    }
+
+    //getters
+    public String getCID() {
+        return mCID;
+    }
+
+    public String getType() {
+        return mCType;
+    }
+
+    public java.util.Date getDate() {
+        return mCDate;
+    }
+
+    public String getItemID() {
+        return mItemID;
+    }
+
+    public String getItemType() {
+        return mItemType;
+    }
+
+    public String getLocation() {
+        return mLocation;
+    }
+
+    public java.util.Date getStartDate() {
+        return mStartDate;
+    }
+
+    public java.util.Date getDueDate() {
+        return mDueDate;
+    }
+
+    public int getTier() {
+        return mTier;
+    }
+    
+    public String getDepartment() {
+        return mDepartment;
+    }
+    
+    //setters
+    public void setType(String s) {
+        mCType = s;
+    }
+
+    public void setDate(java.util.Date d) {
+        mCDate = d;
+    }
+
+    public void setItemID(String s) {
+        mItemID = s;
+    }
+
+    public void setItemType(String s) {
+        mItemType = s;
+    }
+
+    public void setLocation(String s) {
+        mLocation = s;
+    }
+
+    public void setStartDate(java.util.Date d) {
+        mStartDate = d;
+    }
+
+    public void setDueDate(java.util.Date d) {
+        mDueDate = d;
+    }
+
+    public void setTier(int i) {
+        mTier = i;
+    }
+    
+    public void setDepartment(String s) {
+        mDepartment = s;
+    }    
+    
+    private void openConnection() {
+        try {
+            if (mCon == null || mCon.isClosed()) {
+                Class.forName("com.mysql.jdbc.Driver").newInstance();
+
+                mCon = DriverManager.getConnection(Helpers.getDBCx(), Helpers.getDBUser(), Helpers.getDBPass());
+            }
+        }
+        catch (Exception ec) {
+            System.out.println("CalendarType:openConnection: " + ec.getMessage());
+        }
+    }
+
+    private void closeConnection() {
+        try {
+            if (!mCon.isClosed())
+                mCon.close();
+        }
+        catch (Exception ec) {
+            System.out.println("CalendarType:closeConnection: " + ec.getMessage());
+        }
+    }    
+}
